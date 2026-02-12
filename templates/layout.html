@@ -85,9 +85,27 @@
                                         type="button"
                                         data-bs-toggle="modal"
                                         data-bs-target="#createPostModal">New Post</button>
-                                <a class="btn btn-light mb-2 mb-md-0 me-md-3"
-                                   href="{{ url_for("account_page") }}"
-                                   id="accountBtn">Account</a>
+                                <div class="nav-item dropdown">
+                                    <a class="btn btn-light mb-2 mb-md-0 me-md-3"
+                                       href="#"
+                                       role="button"
+                                       id="accountDropdown"
+                                       data-bs-toggle="dropdown"
+                                       aria-expanded="false">
+                                        <span id="accountBtn">Account</span>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
+                                        <li>
+                                            <a class="dropdown-item" href="{{ url_for("account_page") }}">Profile</a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item" type="button" id="logoutUserBtn">Logout</button>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                             <!-- Shown when logged out -->
                             <div id="loggedOutNav">
@@ -265,7 +283,7 @@
         </script>
         <!-- Auth State Management -->
         <script type="module">
-            import { getCurrentUser } from '/static/js/auth.js';
+            import { getCurrentUser, logout } from '/static/js/auth.js';
 
             async function updateAuthUI() {
                 const user = await getCurrentUser();
@@ -284,6 +302,15 @@
                     loggedOutNav.classList.remove('d-none');
                     accountBtn.textContent = 'Account';
                 }
+            }
+
+            // Handle logout button
+            const logoutBtn = document.getElementById('logoutUserBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    logout();
+                    window.location.href = '/login';
+                });
             }
 
             updateAuthUI();
