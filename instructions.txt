@@ -1,0 +1,17 @@
+
+
+#pip install fastapi
+#pip install sqlalchemy
+
+pip install "fastapi[standard]"
+pip install sqlalchemy
+pip install aiosqlite     #( when using async functions. for postgres use psycopg)
+
+pip install "pwdlib[argon2]" pyjwt pydantic-settings
+
+
+# python-dotenv can also be used instead pydantic-settings but pydantic-settings gives more features
+# pwdlib[argon2] is better than bcrypt but bcrypt can be used.
+
+# A way to generate secret key is run following command
+# python -c "import secrets; print(secrets.token_hex(32))"

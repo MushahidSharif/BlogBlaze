@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+    <article class="content-section {{ 'border-danger' if message_type is not defined or message_type == '' else 'border-success' }} py-3 px-4 mb-4">
+        <h1>
+            {{ context }}
+            {%if message_type == 'success' %}
+              <a class="article-title" href="#">Success</a>
+            {% else %}
+              <a class="article-title" href="#">Oops...  {{ status_code }} Error</a>
+            {%endif %}
+        </h1>
+        <p class="article-content">{{ message }}</p>
+    </article>
+{% endblock content %}
