@@ -2,7 +2,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status, Form
 from fastapi.exception_handlers import (
     http_exception_handler,
     request_validation_exception_handler,
@@ -10,7 +10,7 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import models
 from database import Base, engine, get_db
 from routers import posts, users
-from auth import verify_email_verification_token, send_account_verification_email
+from auth import verify_email_verification_token, send_account_verification_email, send_password_reset_email
 from config import settings
 
 
@@ -132,6 +132,111 @@ async def account_page(request: Request):
         request,
         "account.html",
         {"title": "Account"},
+    )
+
+@app.get("/forgot-password", include_in_schema=False, name="forgot_password_page")
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "forgot_password.html",
+        {"title": "Forgot Password"},
+    )
+
+@app.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request: Request, email: str=Form()):
+
+
+    if email == '':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address.",
+        )
+
+    # Find user by email
+    result = await db.execute(
+        select(models.User).where(func.lower(models.User.email) == email.lower()),
+    )
+    user = result.scalars().first()
+
+    # For security, don't reveal if email exists or not
+    if user:
+        # Send password reset email
+        send_password_reset_email(user.id, email, request)
+
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "message_type": "success",
+            "status_code": status.HTTP_200_OK,
+            "title": 'Success',
+            "message": "If an account with that email exists, a password reset link has been sent.",
+        },
+        status_code=status.HTTP_200_OK,
+    )
+
+@app.get("/reset-password", include_in_schema=False, name="reset_password_page")
+async def reset_password_page(token: str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+    from auth import verify_password_reset_token
+
+    user_id = verify_password_reset_token(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect or expired password reset link",
+        )
+
+    result = await db.execute(select(models.User).where(models.User.id == int(user_id)))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return templates.TemplateResponse(
+        request,
+        "reset_password.html",
+        {"title": "Reset Password"},
+    )
+
+@app.post("/reset-password", include_in_schema=False, status_code=status.HTTP_200_OK)
+async def reset_password(token:str, db: Annotated[AsyncSession, Depends(get_db)], request: Request, password:str = Form()):
+    from auth import verify_password_reset_token, hash_password
+
+    # Verify the reset token
+    user_id = verify_password_reset_token(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect or expired password reset link",
+        )
+
+    # Find user
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Update password
+    user.password_hash = hash_password(password)
+    await db.commit()
+    await db.refresh(user)
+
+
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "message_type": "success",
+            "status_code": status.HTTP_200_OK,
+            "title": 'Success',
+            "message": "Password reset successful. Please login with your new password.",
+        },
+        status_code=status.HTTP_200_OK,
     )
 
 @app.get("/resend_email_verification")

@@ -45,6 +45,7 @@ def _create_jwt_token(data: dict, security_key: str, expires_delta: timedelta | 
     return encoded_jwt
 
 def get_email_verification_token(userid: int):
+    """Generate a email verification token for a user."""
     access_token_expires = timedelta(minutes=120)
     email_token = create_email_verification_link_token(
         data={"sub": str(userid)},
@@ -53,11 +54,10 @@ def get_email_verification_token(userid: int):
     return email_token
 
 def send_account_verification_email(user_id, user_email, request):
+    """Send an email account verification email to the user."""
     email_ver_token = get_email_verification_token(user_id)
-    print(email_ver_token)
     email_verification_url = str(request.url_for('verify_email')) + '?token=' + email_ver_token
-    print(email_verification_url)
-    from utils.email_manager import EmailManager
+
     email_manager = EmailManager()
     email_manager.send_verification_email(user_email, email_verification_url)
 
@@ -95,6 +95,36 @@ def verify_access_token(token: str) -> str | None:
 
 def verify_email_verification_token(token: str) -> str | None:
     return _verify_access_token(token, settings.email_verification_token_key.get_secret_value())
+
+
+def create_password_reset_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    """Create a JWT password reset token."""
+    secret_key = settings.password_reset_token_key.get_secret_value()
+    return _create_jwt_token(data, secret_key, expires_delta)
+
+
+def verify_password_reset_token(token: str) -> str | None:
+    """Verify a JWT password reset token and return the subject (user id) if valid."""
+    return _verify_access_token(token, settings.password_reset_token_key.get_secret_value())
+
+
+def get_password_reset_token(userid: int):
+    """Generate a password reset token for a user."""
+    reset_token_expires = timedelta(minutes=settings.password_reset_token_expire_minutes)
+    reset_token = create_password_reset_token(
+        data={"sub": str(userid)},
+        expires_delta=reset_token_expires,
+    )
+    return reset_token
+
+
+def send_password_reset_email(user_id, user_email, request):
+    """Send a password reset email to the user."""
+    reset_token = get_password_reset_token(user_id)
+    password_reset_url = str(request.url_for('reset_password_page')) + '?token=' + reset_token
+
+    email_manager = EmailManager()
+    email_manager.send_password_reset_email(user_email, password_reset_url)
 
 
 

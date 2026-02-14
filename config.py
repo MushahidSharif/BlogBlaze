@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # Email / SMTP configuration
     email_verification: bool = False
     email_verification_token_key: SecretStr = ""
+    password_reset_token_key: SecretStr = ""
+    password_reset_token_expire_minutes: int = 30
 
     # SMTP configuration
     email_enable: bool = False  # if email sending is enabled or not.
