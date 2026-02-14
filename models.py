@@ -33,14 +33,6 @@ class User(Base):
             return f"/media/profile_pics/{self.image_file}"
         return "/static/profile_pics/default.jpg"
 
-class account_verification(Base):
-    __tablename__ = "account_verification"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False, index=True,)
-    activation_token: Mapped[str] = mapped_column(String(64), nullable=False,)
-    expiry_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False,)
-
 
 class Post(Base):
     __tablename__ = "posts"

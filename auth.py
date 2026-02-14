@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from config import settings
 from database import get_db
+from utils.email_manager import EmailManager
 
 password_hash = PasswordHash.recommended()
 
@@ -51,12 +52,14 @@ def get_email_verification_token(userid: int):
     )
     return email_token
 
-def send_account_verification_email(user_id, request):
+def send_account_verification_email(user_id, user_email, request):
     email_ver_token = get_email_verification_token(user_id)
     print(email_ver_token)
     email_verification_url = str(request.url_for('verify_email')) + '?token=' + email_ver_token
     print(email_verification_url)
-    # TODO send_mail()
+    from utils.email_manager import EmailManager
+    email_manager = EmailManager()
+    email_manager.send_verification_email(user_email, email_verification_url)
 
 def create_email_verification_link_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token."""

@@ -1,4 +1,5 @@
-from pydantic import SecretStr
+from typing import Literal
+from pydantic import EmailStr, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,8 +12,19 @@ class Settings(BaseSettings):
     secret_key: SecretStr
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    # Email / SMTP configuration
     email_verification: bool = False
     email_verification_token_key: SecretStr = ""
+
+    # SMTP configuration
+    email_enable: bool = False  # if email sending is enabled or not.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_security_type : Literal["ssl", "tls"] = "tls"
+    smtp_from_email: EmailStr | None = None
 
 
 settings = Settings()  # type: ignore[call-arg] # Loaded from .env file

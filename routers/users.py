@@ -67,7 +67,7 @@ async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSes
     await db.refresh(new_user)
 
     if settings.email_verification:
-        send_account_verification_email(new_user.id, request)
+        send_account_verification_email(new_user.id, new_user.email, request)
 
     return new_user
 

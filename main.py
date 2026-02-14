@@ -1,5 +1,3 @@
-import http
-
 import uvicorn
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -147,7 +145,7 @@ async def resend_email_verification(uid:int, request: Request, db: Annotated[Asy
             detail="User not found",
         )
     if user.account_status != 0 and settings.email_verification:
-        send_account_verification_email(uid, request)
+        send_account_verification_email(uid, user.email, request)
 
         return templates.TemplateResponse(
             request,
