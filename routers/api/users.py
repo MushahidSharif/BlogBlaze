@@ -105,11 +105,7 @@ async def login_for_access_token(
 
 
     # Create access token with user id as subject
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": str(user.id)},
-        expires_delta=access_token_expires,
-    )
+    access_token = create_access_token(user.id)
     return Token(access_token=access_token, token_type="bearer",
                  account_status=0,
                  resend_email_link=""

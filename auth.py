@@ -1,7 +1,5 @@
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
@@ -9,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from config import settings
 from database import get_db
+from token_manager import TokenManager
 from utils.email_manager import EmailManager
 
 password_hash = PasswordHash.recommended()
@@ -21,37 +19,28 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/token")
 def hash_password(password: str) -> str:
     return password_hash.hash(password)
 
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
 
 
-def _create_jwt_token(data: dict, security_key: str, expires_delta: timedelta | None = None) -> str:
-
+# Access token creation and verification
+def create_access_token(userid) -> str:
     """Create a JWT access token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
-    else:
-        expire = datetime.now(UTC) + timedelta(
-            minutes=settings.access_token_expire_minutes,
-        )
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode,
-        security_key,
-        algorithm=settings.algorithm,
-    )
-    return encoded_jwt
+    return TokenManager.create_access_token(data={"sub": str(userid)})
 
-def get_email_verification_token(userid: int):
-    """Generate a email verification token for a user."""
-    access_token_expires = timedelta(minutes=120)
-    email_token = create_email_verification_link_token(
-        data={"sub": str(userid)},
-        expires_delta=access_token_expires,
-    )
-    return email_token
+def verify_access_token(token: str) -> str | None:
+    """Verify a JWT access token and return the subject (user id) if valid."""
+    return TokenManager.verify_access_token(token)
+
+
+# Email verify token creation and verification
+def get_email_verification_token(userid: int) -> str:
+    """Generate an email verification token for a user."""
+    return TokenManager.create_email_verification_token(data={"sub": str(userid)},)
+
+def verify_email_verification_token(token: str) -> str | None:
+    """Verify a JWT email verification token and return the subject (user id) if valid."""
+    return TokenManager.verify_email_verification_token(token)
 
 def send_account_verification_email(user_id, user_email, request):
     """Send an email account verification email to the user."""
@@ -61,62 +50,15 @@ def send_account_verification_email(user_id, user_email, request):
     email_manager = EmailManager()
     email_manager.send_verification_email(user_email, email_verification_url)
 
-def create_email_verification_link_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT access token."""
 
-    secret_key = settings.email_verification_token_key.get_secret_value()
-    return _create_jwt_token(data, secret_key, expires_delta)
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT access token."""
-
-    secret_key = settings.secret_key.get_secret_value()
-    return _create_jwt_token(data, secret_key, expires_delta)
-
-def _verify_access_token(token: str, secret_key: str) -> str | None:
-    """Verify a JWT access token and return the subject (user id) if valid."""
-    try:
-        payload = jwt.decode(
-            token,
-            secret_key,
-            algorithms=[settings.algorithm],
-            options={"require": ["exp", "sub"]},
-        )
-    except jwt.InvalidTokenError:
-        return None
-    else:
-        return payload.get("sub")
-
-
-def verify_access_token(token: str) -> str | None:
-    """Verify a JWT access token and return the subject (user id) if valid."""
-    return _verify_access_token(token, settings.secret_key.get_secret_value())
-
-def verify_email_verification_token(token: str) -> str | None:
-    return _verify_access_token(token, settings.email_verification_token_key.get_secret_value())
-
-
-def create_password_reset_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT password reset token."""
-    secret_key = settings.password_reset_token_key.get_secret_value()
-    return _create_jwt_token(data, secret_key, expires_delta)
-
+# Password reset token creation and verification
+def get_password_reset_token(userid: int) -> str:
+    """Generate a password reset token for a user."""
+    return TokenManager.create_password_reset_token( data={"sub": str(userid)}, )
 
 def verify_password_reset_token(token: str) -> str | None:
     """Verify a JWT password reset token and return the subject (user id) if valid."""
-    return _verify_access_token(token, settings.password_reset_token_key.get_secret_value())
-
-
-def get_password_reset_token(userid: int):
-    """Generate a password reset token for a user."""
-    reset_token_expires = timedelta(minutes=settings.password_reset_token_expire_minutes)
-    reset_token = create_password_reset_token(
-        data={"sub": str(userid)},
-        expires_delta=reset_token_expires,
-    )
-    return reset_token
-
+    return TokenManager.verify_password_reset_token(token)
 
 def send_password_reset_email(user_id, user_email, request):
     """Send a password reset email to the user."""
