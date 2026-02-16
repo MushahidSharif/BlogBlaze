@@ -11,10 +11,11 @@ import models
 from auth import (
     CurrentUser,
     create_access_token,
-    send_account_verification_email,
     hash_password,
     verify_password,
 )
+from access_manager import AccessManager
+
 from config import settings
 from database import get_db
 from schemas import PostResponse, Token, UserCreate, UserPrivate, UserPublic, UserUpdate
@@ -66,7 +67,7 @@ async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSes
     await db.refresh(new_user)
 
     if settings.email_verification:
-        send_account_verification_email(new_user.id, new_user.email, request)
+        AccessManager.send_account_verification_email(new_user.id, new_user.email, request)
 
     return new_user
 

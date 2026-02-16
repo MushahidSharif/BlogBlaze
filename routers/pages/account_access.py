@@ -5,13 +5,15 @@ from sqlalchemy import func, select
 import models
 from database import get_db
 
-from auth import verify_email_verification_token, send_account_verification_email, send_password_reset_email
+from auth import hash_password
+from access_manager import AccessManager
+
 from config import settings
 from appinfo import templates
 from utils import html_utils
 
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 # account access related endpoints (e.g. forgot password, account verification)
 @router.get("/forgot-password", include_in_schema=False, name="forgot_password_page")
@@ -24,7 +26,6 @@ async def forgot_password_page(request: Request):
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request: Request, email: str=Form()):
-
 
     if email == '':
         raise HTTPException(
@@ -41,7 +42,7 @@ async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request:
     # For security, don't reveal if email exists or not
     if user:
         # Send password reset email
-        send_password_reset_email(user.id, email, request)
+        AccessManager.send_password_reset_email(user.id, email, request)
 
 
     return html_utils.get_html_message_response(
@@ -52,9 +53,8 @@ async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request:
 
 @router.get("/reset-password", include_in_schema=False, name="reset_password_page")
 async def reset_password_page(token: str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    from auth import verify_password_reset_token
 
-    user_id = verify_password_reset_token(token)
+    user_id = AccessManager.verify_password_reset_token(token)
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -77,10 +77,9 @@ async def reset_password_page(token: str, request: Request, db: Annotated[AsyncS
 
 @router.post("/reset-password", include_in_schema=False, status_code=status.HTTP_200_OK)
 async def reset_password(token:str, db: Annotated[AsyncSession, Depends(get_db)], request: Request, password:str = Form()):
-    from auth import verify_password_reset_token, hash_password
 
     # Verify the reset token
-    user_id = verify_password_reset_token(token)
+    user_id = AccessManager.verify_password_reset_token(token)
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -119,7 +118,7 @@ async def resend_email_verification(uid:int, request: Request, db: Annotated[Asy
             detail="User not found",
         )
     if user.account_status != 0 and settings.email_verification:
-        send_account_verification_email(uid, user.email, request)
+        AccessManager.send_account_verification_email(uid, user.email, request)
         return html_utils.get_html_message_response(
             request, message_type="success", title="Success",
             message="Account Verification email has been send. Please check your email.",
@@ -134,7 +133,7 @@ async def resend_email_verification(uid:int, request: Request, db: Annotated[Asy
 
 @router.get("/verifyEmail")
 async def verify_email(token:str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    user_id = verify_email_verification_token(token)
+    user_id = AccessManager.verify_email_verification_token(token)
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
