@@ -1,4 +1,6 @@
 from pathlib import Path
+
+import appinfo
 from appinfo import EMAIL_TEMPLATES_DIR
 from config import settings
 from .email_sender_smtp import EmailSenderSMTP
@@ -8,7 +10,7 @@ class EmailManager():
     def __init__(self):
         self.__email_sender: EmailSenderSMTP = EmailSenderSMTP()
 
-    def __send_html_email(self, template_path: Path, place_holder_name, replacement_value,
+    def __send_html_email(self, template_path: Path, place_holder_replacement_dict,
                           to_email: str, subject: str
                           ):
 
@@ -19,10 +21,10 @@ class EmailManager():
 
         html_body = template_path.read_text(encoding="utf-8")
 
-        html_body = (
-            html_body.replace(place_holder_name, replacement_value)
-            .replace("{{CURRENT_YEAR}}", str(datetime.datetime.now(datetime.UTC).year))
-        )
+        for item in place_holder_replacement_dict.items():
+            place_holder_name = item[0]
+            replacement_value = item[1]
+            html_body = html_body.replace(place_holder_name, replacement_value)
 
         print(html_body)
         print(replacement_value)
@@ -38,7 +40,7 @@ class EmailManager():
 
 
     def send_verification_email(self, to_email: str, verification_link: str,*,
-                                subject: str = "Verify your DishTalk account",
+                                subject: str = f"Verify your {appinfo.APP_NAME} account",
     ) -> None:
         """
         Load the HTML email verification template, inject the verification link,
@@ -54,14 +56,19 @@ class EmailManager():
             return
         try:
             template_path = Path(EMAIL_TEMPLATES_DIR + "/verification_email.html")
-            self.__send_html_email(template_path,"{{VERIFICATION_LINK}}", verification_link, to_email, subject)
+            place_holder_replacement_dict = {
+                "{{VERIFICATION_LINK}}": verification_link,
+                "{{APP_NAME}}": appinfo.APP_NAME,
+                "{{CURRENT_YEAR}}": str(datetime.datetime.now(datetime.UTC).year)
+            }
+            self.__send_html_email(template_path, place_holder_replacement_dict, to_email, subject)
 
         except Exception as ex:
             print('Error in sending emails.', ex)
 
 
     def send_password_reset_email(self, to_email: str, reset_link: str, *,
-                                  subject: str = "Reset your DishTalk password",
+                                  subject: str = f"Reset your {appinfo.APP_NAME} password",
     ) -> None:
         """
         Load the HTML password reset template, inject the reset link,
@@ -77,7 +84,12 @@ class EmailManager():
             return
         try:
             template_path = Path(EMAIL_TEMPLATES_DIR + "/reset_password_email.html")
-            self.__send_html_email(template_path,"{{RESET_LINK}}", reset_link, to_email, subject)
+            place_holder_replacement_dict = {
+                "{{RESET_LINK}}": reset_link,
+                "{{APP_NAME}}": appinfo.APP_NAME,
+                "{{CURRENT_YEAR}}": str(datetime.datetime.now(datetime.UTC).year)
+            }
+            self.__send_html_email(template_path,place_holder_replacement_dict, to_email, subject)
 
         except Exception as ex:
             print('Error in sending emails.', ex)
