@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <script>
+            //set theme on page loading.
+            const setThemeInitial = (theme) => {
+                if (theme === 'auto') {
+                document.documentElement.setAttribute('data-bs-theme',
+                    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                } else {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                }
+                localStorage.setItem('theme', theme);
+            };
+
+            // Initialize
+            setThemeInitial(localStorage.getItem('theme') || 'auto');
+        </script>
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <!-- Site Info -->
@@ -37,7 +53,7 @@
               type="text/css"
               href="{{ url_for("static", path='css/main.css') }}">
         <!-- Set a theme color that matches your website's primary color -->
-        <meta name="theme-color" content="#527c9f">
+        <meta name="theme-color" content="#b19cd9">
         <!-- Favicon for all browsers -->
         <link rel="icon"
               href="{{ url_for('static', path='icons/favicon.ico') }}"

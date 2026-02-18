@@ -27,7 +27,6 @@ class EmailManager():
             html_body = html_body.replace(place_holder_name, replacement_value)
 
         print(html_body)
-        print(replacement_value)
         return
         # TODO Remove it
 

@@ -5,7 +5,8 @@
   --font-body: "Nunito", system-ui, -apple-system, BlinkMacSystemFont,
     sans-serif;
 
-  /* Colors */
+  /* Colors  Default theme for light mode*/
+  /*
   --color-bg-body: #fafafa;
   --color-bg-content: #ffffff;
   --color-text-primary: #333333;
@@ -16,6 +17,19 @@
   --color-link-hover: #428bca;
   --color-border: #dddddd;
   --color-border-light: #e3e3e3;
+  */
+
+  /* Colors - Pastel Theme for Light Mode */
+  --color-bg-body: #f5f3f8;
+  --color-bg-content: #fef9f5;
+  --color-text-primary: #5a5a5a;
+  --color-text-heading: #6b5b7f;
+  --color-steel: #b19cd9;
+  --color-nav-link: #d9c3e8;
+  --color-nav-link-hover: #ffffff;
+  --color-link-hover: #9b7eb8;
+  --color-border: #e8d9ed;
+  --color-border-light: #f0e8f3;
 
   /* Spacing */
   --spacing-xl: 5rem;
@@ -281,11 +295,11 @@ a.article-title:focus {
 
 /* Custom Modal Colors */
 .modal-header.bg-success {
-  background-color: #4a7c5d !important;
+  background-color: #c9d9b3 !important;
 }
 
 .modal-header.bg-danger {
-  background-color: #a85b5b !important;
+  background-color: #d8a3a3 !important;
 }
 
 /* Ensure modal header text stays white in both themes */
