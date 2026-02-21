@@ -1,3 +1,6 @@
+"""
+Endpoints related to account access management, such as password reset and email verification.
+"""
 from typing import Annotated
 from fastapi import APIRouter, Depends,  HTTPException, Request, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession

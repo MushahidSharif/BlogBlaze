@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import appinfo
 from appinfo import EMAIL_TEMPLATES_DIR
 from config import settings
@@ -7,6 +6,11 @@ from .email_sender_smtp import EmailSenderSMTP
 import  datetime
 
 class EmailManager():
+    """
+    This class is responsible for managing email sending in the application. It provides methods to send different
+    types of emails such as account verification and password reset emails.
+    """
+
     def __init__(self):
         self.__email_sender: EmailSenderSMTP = EmailSenderSMTP()
 

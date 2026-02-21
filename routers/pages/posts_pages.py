@@ -1,4 +1,8 @@
-
+"""
+This module defines the routes for rendering HTML pages related to posts, including the home page,
+individual post pages, and user-specific post pages. It uses FastAPI's templating system to render the
+appropriate HTML templates with the necessary data retrieved from the database.
+"""
 from typing import Annotated
 from fastapi import APIRouter, Depends,  HTTPException, Request, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession

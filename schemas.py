@@ -1,7 +1,11 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+
+"""
+This module contains pydantic models used in application. These are used when receiving data in request or returning 
+data in response. 
+"""
 
 class UserBase(BaseModel):
     username: str = Field(min_length=1, max_length=50)

@@ -1,5 +1,9 @@
+"""
+This module defines the API endpoints for managing blog posts. It includes routes for creating, retrieving, updating,
+ and deleting posts. Each post is associated with a user (the author), and the endpoints enforce authorization to
+ ensure that only the author can modify or delete their posts.
+"""
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

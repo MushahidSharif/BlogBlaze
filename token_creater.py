@@ -1,3 +1,9 @@
+"""
+This module defines the TokenCreator class, which is responsible for creating and verifying JWT tokens for different
+ contexts such as access tokens, email verification tokens, and password reset tokens.
+ The class uses the PyJWT library to handle token encoding and decoding, and it manages secret keys and expiration
+ times based on the token type.
+"""
 from datetime import UTC, datetime, timedelta
 import enum
 import jwt
@@ -5,6 +11,7 @@ from config import settings
 
 
 class TokenType(enum.StrEnum):
+    """Enumeration of different token types used in the application."""
     ACCESS_TOKEN = "access"
     EMAIL_VERIFICATION_TOKEN = "email_verification"
     PASSWORD_RESET_TOKEN = "password_reset"

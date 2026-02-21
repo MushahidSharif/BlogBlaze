@@ -1,4 +1,7 @@
-
+"""
+This module defines the routes for user-related pages, including login, registration, and account management.
+Each route renders the appropriate HTML template for the corresponding page.
+"""
 
 from fastapi import APIRouter, Request
 from appinfo import templates

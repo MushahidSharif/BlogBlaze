@@ -1,6 +1,7 @@
-from datetime import timedelta
+"""
+User-related API endpoints for registration, authentication, and profile management.
+"""
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, select
@@ -22,14 +23,16 @@ from schemas import PostResponse, Token, UserCreate, UserPrivate, UserPublic, Us
 
 router = APIRouter()
 
-
-
 @router.post(
     "",
     response_model=UserPrivate,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+    """
+    Create a new user account. Usernames and emails must be unique (case-insensitive). Passwords are hashed before storing.
+    """
+    # Check if user with same username or email already exists (case-insensitive). If yes, return error
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.username) == user.username.lower(),
@@ -42,6 +45,7 @@ async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSes
             detail="Username already exists",
         )
 
+    # Check to ensure email is not already registered (case-insensitive). If yes, return error
     result = await db.execute(
         select(models.User).where(func.lower(models.User.email) == user.email.lower()),
     )
@@ -52,6 +56,7 @@ async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSes
             detail="Email already registered",
         )
 
+    # Set account status based on whether email verification is required
     account_status = 0 if not settings.email_verification else 1
 
     new_user = models.User(
@@ -61,11 +66,12 @@ async def create_user(user: UserCreate, request: Request, db: Annotated[AsyncSes
         account_status=account_status,
     )
 
-
+    # add new user to database and commit
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
+    # If email verification is required, send account verification email to the user
     if settings.email_verification:
         AccessManager.send_account_verification_email(new_user.id, new_user.email, request)
 
@@ -115,8 +121,14 @@ async def login_for_access_token(
 
 @router.get("/me", response_model=UserPrivate)
 async def get_current_user(current_user: CurrentUser):
+    """
+    Get the currently authenticated user's information. Requires a valid access token.
+    :param current_user: populated by the get_current_user dependency, which verifies the access token
+           and retrieves the user from the database
+    :return: Current user's information, excluding password hash. If the token is invalid or expired, a 401 error is
+            returned by the dependency.
+    """
     return current_user
-
 
 @router.get("/{user_id}", response_model=UserPublic)
 async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):

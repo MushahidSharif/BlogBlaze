@@ -111,6 +111,9 @@ class LoggingManager:
         return self.JsonFormatter() if name == "json" else logging.Formatter(self.__get_standard_format(), datefmt="%Y-%m-%d %H:%M",)
 
     def configure(self):
+        """
+        Configure logging based on the provided settings.
+        """
 
         formatter_name = "json" if self.json_logs else "standard"
         app_log_file_path = self.log_dir + "app.log"

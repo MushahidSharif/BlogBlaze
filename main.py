@@ -1,3 +1,6 @@
+"""
+Main module for initializing and starting FAST Api application
+"""
 from contextlib import asynccontextmanager
 from logging_config import log_config
 
