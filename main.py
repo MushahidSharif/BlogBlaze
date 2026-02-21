@@ -1,5 +1,5 @@
-import uvicorn
 from contextlib import asynccontextmanager
+from logging_config import log_config
 
 from fastapi import FastAPI, Request, status
 from fastapi.exception_handlers import (
@@ -24,22 +24,7 @@ async def lifespan(_app: FastAPI):
     # Shutdown
     await engine.dispose()
 
-
 app = FastAPI(lifespan=lifespan)
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/media", StaticFiles(directory="media"), name="media")
-
-
-# Adding REST API Routers
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-
-# Adding HTML Page Routers
-app.include_router(account_access.router)
-app.include_router(users_pages.router)
-app.include_router(posts_pages.router)
-
 
 #Handle general exceptions
 @app.exception_handler(StarletteHTTPException)
@@ -47,6 +32,7 @@ async def general_http_exception_handler(
     request: Request,
     exception: StarletteHTTPException,
 ):
+    logger.error("Invalid Http request. %s", str(exception))
     if request.url.path.startswith("/api"):
         return await http_exception_handler(request, exception)
 
@@ -67,6 +53,7 @@ async def validation_exception_handler(
     request: Request,
     exception: RequestValidationError,
 ):
+    logger.error("Invalid Data in request. %s",  str(exception))
     if request.url.path.startswith("/api"):
         return await request_validation_exception_handler(request, exception)
 
@@ -76,5 +63,23 @@ async def validation_exception_handler(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
     )
 
-if __name__ == "__main__":
-    uvicorn.run("main:app", reload=True)
+
+def initialize_application():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/media", StaticFiles(directory="media"), name="media")
+
+    # Adding REST API Routers
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+
+    # Adding HTML Page Routers
+    app.include_router(account_access.router)
+    app.include_router(users_pages.router)
+    app.include_router(posts_pages.router)
+
+
+log_config.setup_logging()
+initialize_application()
+
+logger = log_config.get_logger(__name__)
+logger.info("Application is starting")

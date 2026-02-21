@@ -1,5 +1,9 @@
 from utils.email_manager import EmailManager
 from token_creater import TokenCreator, TokenType
+from logging_config import log_config
+
+logger = log_config.get_logger(__name__)
+
 
 class AccessManager:
 
@@ -25,6 +29,7 @@ class AccessManager:
     @staticmethod
     def send_account_verification_email(user_id, user_email, request):
         """Generate a email account verification token and send an email account verification email to the user."""
+        logger.info("Sending password reset email for userid %s", user_id)
         data = {"sub": str(user_id)}
         email_ver_token = TokenCreator.create_token(data, TokenType.EMAIL_VERIFICATION_TOKEN)
         email_verification_url = str(request.url_for('verify_email')) + '?token=' + email_ver_token
@@ -43,6 +48,7 @@ class AccessManager:
     @staticmethod
     def send_password_reset_email(user_id, user_email, request):
         """Generate a token for password reset and send a password reset email to the user."""
+        logger.info("Sending password reset email for userid %s",  user_id )
         data = {"sub": str(user_id)}
         reset_token = TokenCreator.create_token(data, TokenType.PASSWORD_RESET_TOKEN)
         password_reset_url = str(request.url_for('reset_password_page')) + '?token=' + reset_token
