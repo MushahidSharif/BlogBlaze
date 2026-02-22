@@ -21,11 +21,18 @@ from utils import html_utils
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
+    logmanager = log_config.get_log_manager()
+    logmanager.configure()
+    logger = log_config.get_logger(__name__)
+    logger.info("Application is starting")
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     # Shutdown
     await engine.dispose()
+    logmanager.shutdown()  # if running with QueueLoggingManager, ensure all logs are flushed before shutdown
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -81,8 +88,5 @@ def initialize_application():
     app.include_router(posts_pages.router)
 
 
-log_config.setup_logging()
 initialize_application()
 
-logger = log_config.get_logger(__name__)
-logger.info("Application is starting")

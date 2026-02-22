@@ -97,8 +97,14 @@ def get_logger(module_name):
 
 def setup_logging():
     app_name = appinfo.APP_NAME
-    log_mngr = log_manager.LoggingManager(app_name, LOG_LEVEL, log_in_file, app_only_log, separate_log_files)
+    #log_mngr = log_manager.LoggingManager(app_name, LOG_LEVEL, log_in_file, app_only_log, separate_log_files)
+    log_mngr = log_manager.QueueLoggingManager(app_name, LOG_LEVEL, log_in_file, app_only_log, separate_log_files)
     log_mngr.configure()
+
+def get_log_manager():
+    app_name = appinfo.APP_NAME
+    log_mngr = log_manager.QueueLoggingManager(app_name, LOG_LEVEL, log_in_file, app_only_log, separate_log_files)
+    return log_mngr
 
 
 
