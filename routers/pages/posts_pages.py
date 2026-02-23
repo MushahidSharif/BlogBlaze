@@ -2,28 +2,24 @@
 This module defines the routes for rendering HTML pages related to posts, including the home page,
 individual post pages, and user-specific post pages. It uses FastAPI's templating system to render the
 appropriate HTML templates with the necessary data retrieved from the database.
+
+The page handlers delegate to data_services modules for business logic (listing posts, fetching users,
+retrieving specific posts) to reduce code duplication and maintain separation of concerns.
 """
 from typing import Annotated
-from fastapi import APIRouter, Depends,  HTTPException, Request, status, Form
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-import models
-from database import get_db
 from appinfo import templates
-
+from database import get_db
+from data_services import posts_service, users_service
 
 router = APIRouter()
 
 @router.get("/", include_in_schema=False, name="home")
 @router.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(
-        select(models.Post)
-        .options(selectinload(models.Post.author))
-        .order_by(models.Post.date_posted.desc()),
-    )
-    posts = result.scalars().all()
+    """Render the home page displaying all posts ordered by date (newest first)."""
+    posts = await posts_service.list_posts(db=db)
     return templates.TemplateResponse(
         request,
         "home.html",
@@ -37,20 +33,14 @@ async def post_page(
     post_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(
-        select(models.Post)
-        .options(selectinload(models.Post.author))
-        .where(models.Post.id == post_id),
+    """Render a single post page. Returns 404 if the post does not exist."""
+    post = await posts_service.get_post_or_404(db=db, post_id=post_id)
+    title = post.title[:50]
+    return templates.TemplateResponse(
+        request,
+        "post.html",
+        {"post": post, "title": title},
     )
-    post = result.scalars().first()
-    if post:
-        title = post.title[:50]
-        return templates.TemplateResponse(
-            request,
-            "post.html",
-            {"post": post, "title": title},
-        )
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
 
 @router.get("/users/{user_id}/posts", include_in_schema=False, name="user_posts")
@@ -59,20 +49,10 @@ async def user_posts_page(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(select(models.User).where(models.User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    result = await db.execute(
-        select(models.Post)
-        .options(selectinload(models.Post.author))
-        .where(models.Post.user_id == user_id)
-        .order_by(models.Post.date_posted.desc()),
-    )
-    posts = result.scalars().all()
+    """Render the user posts page displaying all posts for a specific user. Returns 404 if user does not exist."""
+    user = await users_service.get_user_or_404(db=db, user_id=user_id)
+    posts = await posts_service.get_posts_by_user(db=db, user_id=user_id)
+
     return templates.TemplateResponse(
         request,
         "user_posts.html",

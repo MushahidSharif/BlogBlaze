@@ -4,8 +4,6 @@ Endpoints related to account access management, such as password reset and email
 from typing import Annotated
 from fastapi import APIRouter, Depends,  HTTPException, Request, status, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select
-import models
 from database import get_db
 
 from auth import hash_password
@@ -14,6 +12,7 @@ from access_manager import AccessManager
 from config import settings
 from appinfo import templates
 from utils import html_utils
+from data_services import users_service
 
 
 router = APIRouter(include_in_schema=False)
@@ -37,10 +36,7 @@ async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request:
         )
 
     # Find user by email
-    result = await db.execute(
-        select(models.User).where(func.lower(models.User.email) == email.lower()),
-    )
-    user = result.scalars().first()
+    user = await users_service.get_user_from_email(db=db, user_email=email)
 
     # For security, don't reveal if email exists or not
     if user:
@@ -56,6 +52,10 @@ async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request:
 
 @router.get("/reset-password", include_in_schema=False, name="reset_password_page")
 async def reset_password_page(token: str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+    """
+    Render the password reset page if the token provided in query string  is valid.
+    Otherwise, show an error message.
+    """
 
     user_id = AccessManager.verify_password_reset_token(token)
     if user_id is None:
@@ -64,13 +64,7 @@ async def reset_password_page(token: str, request: Request, db: Annotated[AsyncS
             detail="Incorrect or expired password reset link",
         )
 
-    result = await db.execute(select(models.User).where(models.User.id == int(user_id)))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    user = await users_service.get_user_or_404(db, int(user_id))
 
     return templates.TemplateResponse(
         request,
@@ -90,19 +84,12 @@ async def reset_password(token:str, db: Annotated[AsyncSession, Depends(get_db)]
         )
 
     # Find user
-    result = await db.execute(select(models.User).where(models.User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    user = await users_service.get_user_or_404(db, int(user_id))
 
     # Update password
     user.password_hash = hash_password(password)
     await db.commit()
     await db.refresh(user)
-
 
     return html_utils.get_html_message_response(
         request, message_type="success", title="Success",
@@ -113,13 +100,8 @@ async def reset_password(token:str, db: Annotated[AsyncSession, Depends(get_db)]
 @router.get("/resend_email_verification")
 async def resend_email_verification(uid:int, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
 
-    result = await db.execute(select(models.User).where(models.User.id == uid))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    user = await users_service.get_user_or_404(db, uid)
+
     if user.account_status != 0 and settings.email_verification:
         AccessManager.send_account_verification_email(uid, user.email, request)
         return html_utils.get_html_message_response(
@@ -143,13 +125,8 @@ async def verify_email(token:str, request: Request, db: Annotated[AsyncSession, 
             detail="Incorrect or expired verification link",
         )
 
-    result = await db.execute(select(models.User).where(models.User.id == user_id))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    user = await users_service.get_user_or_404(db, int(user_id))
+
     if user.account_status ==0:
         return html_utils.get_html_message_response(
             request, message_type="success", title="Success",

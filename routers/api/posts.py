@@ -4,28 +4,19 @@ This module defines the API endpoints for managing blog posts. It includes route
  ensure that only the author can modify or delete their posts.
 """
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-import models
 from auth import CurrentUser
 from database import get_db
 from schemas import PostCreate, PostResponse, PostUpdate
+from data_services import posts_service
 
 router = APIRouter()
 
-
 @router.get("", response_model=list[PostResponse])
 async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(
-        select(models.Post)
-        .options(selectinload(models.Post.author))
-        .order_by(models.Post.date_posted.desc()),
-    )
-    posts = result.scalars().all()
-    return posts
+    return await posts_service.list_posts(db=db)
 
 
 @router.post(
@@ -38,28 +29,12 @@ async def create_post(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    new_post = models.Post(
-        title=post.title,
-        content=post.content,
-        user_id=current_user.id,
-    )
-    db.add(new_post)
-    await db.commit()
-    await db.refresh(new_post, attribute_names=["author"])
-    return new_post
+    return await posts_service.create_post(db=db, post=post, current_user=current_user)
 
 
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post(post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(
-        select(models.Post)
-        .options(selectinload(models.Post.author))
-        .where(models.Post.id == post_id),
-    )
-    post = result.scalars().first()
-    if post:
-        return post
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    return await posts_service.get_post_or_404(db=db, post_id=post_id)
 
 
 @router.put("/{post_id}", response_model=PostResponse)
@@ -69,26 +44,7 @@ async def update_post_full(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(select(models.Post).where(models.Post.id == post_id))
-    post = result.scalars().first()
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found",
-        )
-
-    if post.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this post",
-        )
-
-    post.title = post_data.title
-    post.content = post_data.content
-
-    await db.commit()
-    await db.refresh(post, attribute_names=["author"])
-    return post
+    return await posts_service.update_post_full(db=db, post_id=post_id, post_data=post_data, current_user=current_user)
 
 
 @router.patch("/{post_id}", response_model=PostResponse)
@@ -98,27 +54,7 @@ async def update_post_partial(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(select(models.Post).where(models.Post.id == post_id))
-    post = result.scalars().first()
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found",
-        )
-
-    if post.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this post",
-        )
-
-    update_data = post_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(post, field, value)
-
-    await db.commit()
-    await db.refresh(post, attribute_names=["author"])
-    return post
+    return await posts_service.update_post_partial(db=db, post_id=post_id, post_data=post_data, current_user=current_user)
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -127,19 +63,4 @@ async def delete_post(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(select(models.Post).where(models.Post.id == post_id))
-    post = result.scalars().first()
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found",
-        )
-
-    if post.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this post",
-        )
-
-    await db.delete(post)
-    await db.commit()
+    await posts_service.delete_post(db=db, post_id=post_id, current_user=current_user)

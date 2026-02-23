@@ -18,9 +18,13 @@ from routers.api import users, posts
 from routers.pages import users_pages, posts_pages, account_access
 from utils import html_utils
 
+# Logger is none here because it will be initialized in the lifespan function after the log manager is configured.
+logger = None
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
+    global logger
     logmanager = log_config.get_log_manager()
     logmanager.configure()
     logger = log_config.get_logger(__name__)
