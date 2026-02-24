@@ -17,6 +17,8 @@ from database import Base, engine
 from routers.api import users, posts
 from routers.pages import users_pages, posts_pages, account_access
 from utils import html_utils
+from pathlib import Path
+import  appinfo
 
 # Logger is none here because it will be initialized in the lifespan function after the log manager is configured.
 logger = None
@@ -78,7 +80,13 @@ async def validation_exception_handler(
     )
 
 
+def create_required_folders():
+    log_folder = Path(appinfo.APP_BASE_DIR +"/logs")
+    log_folder.mkdir(parents=True, exist_ok=True)
+
 def initialize_application():
+    create_required_folders()
+
     app.mount("/static", StaticFiles(directory="static"), name="static")
     app.mount("/media", StaticFiles(directory="media"), name="media")
 
