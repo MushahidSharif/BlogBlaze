@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import CurrentUser
 from database import get_db
-from schemas import PostResponse, Token, UserCreate, UserPrivate, UserPublic, UserUpdate
+from schemas import PostResponse, Token, UserCreate, UserPrivate, UserPublic, UserUpdate, PasswordUpdate
 
 from data_services import users_service
 
@@ -65,6 +65,19 @@ async def update_user(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await users_service.update_user(db=db, user_id=user_id, user_update=user_update, current_user=current_user)
+
+
+@router.post("/{user_id}/update-password", response_model=UserPrivate)
+async def update_password(
+    user_id: int,
+    password_update: PasswordUpdate,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Update user password. Only the authenticated user can update their own password.
+    """
+    return await users_service.update_password(db=db, user_id=user_id, password_update=password_update, current_user=current_user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -11,7 +11,7 @@ import models
 from auth import hash_password, verify_password, create_access_token
 from access_manager import AccessManager
 from config import settings
-from schemas import Token, UserCreate, UserUpdate
+from schemas import Token, UserCreate, UserUpdate, PasswordUpdate
 from logging_config import log_config
 
 logger = log_config.get_logger(__name__)
@@ -201,3 +201,34 @@ async def get_user_from_email(db: AsyncSession, user_email:str):
     )
     user = result.scalars().first()
     return user
+
+
+async def update_password(db: AsyncSession, user_id: int, password_update: PasswordUpdate, current_user: models.User) -> models.User:
+    """Update user password. Only the user can update their own password."""
+    if user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user's password")
+
+    try:
+        user = await get_user_or_404(db, user_id)  # will raise 404 if user doesn't exist
+
+        if not verify_password(password_update.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Hash the new password and update it
+        user.password_hash = hash_password(password_update.new_password)
+
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+    except HTTPException:
+        raise
+    except Exception:
+        await db.rollback()
+        logger.exception("Error updating password for user_id:%s" % (user_id))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+

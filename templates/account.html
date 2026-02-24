@@ -44,24 +44,26 @@
             <input type="file" class="form-control" disabled>
         </div>
         <hr>
-        <!-- Password Reset Section (Placeholder) -->
+        <!-- Change Password Section -->
         <div class="mb-4">
             <h5>Change Password</h5>
-            <p class="text-body-secondary">Password reset coming in a future tutorial.</p>
-            <form>
+            <form id="changePasswordForm">
                 <div class="mb-3">
-                    <label class="form-label">Current Password</label>
-                    <input type="password" class="form-control" disabled>
+                    <label for="currentPassword" class="form-label">Current Password</label>
+                    <input type="password" class="form-control" id="currentPassword" name="password" required minlength="8">
+                    <small class="form-text text-muted">Minimum 8 characters</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">New Password</label>
-                    <input type="password" class="form-control" disabled>
+                    <label for="newPassword" class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="newPassword" name="password" required minlength="8">
+                    <small class="form-text text-muted">Minimum 8 characters</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Confirm New Password</label>
-                    <input type="password" class="form-control" disabled>
+                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required minlength="8">
                 </div>
-                <button type="submit" class="btn btn-primary" disabled>Change Password</button>
+                <div id="passwordError" class="text-danger d-none">Passwords do not match.</div>
+                <button type="submit" class="btn btn-primary">Change Password</button>
             </form>
         </div>
         <hr>
@@ -189,6 +191,89 @@
 
         document.getElementById('successMessage').textContent =
           'Profile updated successfully!';
+        showModal('successModal');
+      } else {
+        const error = await response.json();
+        document.getElementById('errorMessage').textContent = getErrorMessage(error);
+        showModal('errorModal');
+      }
+    } catch (error) {
+      document.getElementById('errorMessage').textContent =
+        'Network error. Please check your connection and try again.';
+      showModal('errorModal');
+    }
+  });
+
+  // Change Password Form Handler
+  const changePasswordForm = document.getElementById('changePasswordForm');
+  const newPasswordInput = document.getElementById('newPassword');
+  const confirmPasswordInput = document.getElementById('confirmPassword');
+  const passwordError = document.getElementById('passwordError');
+
+  // Check passwords match on input
+  confirmPasswordInput.addEventListener('input', () => {
+    if (newPasswordInput.value !== confirmPasswordInput.value) {
+      passwordError.classList.remove('d-none');
+      confirmPasswordInput.setCustomValidity('Passwords do not match');
+    } else {
+      passwordError.classList.add('d-none');
+      confirmPasswordInput.setCustomValidity('');
+    }
+  });
+
+  changePasswordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (newPassword !== confirmPassword) {
+      passwordError.classList.remove('d-none');
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/${currentUserId}/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (response.status === 401) {
+        document.getElementById('errorMessage').textContent =
+          'Current Password is incorrect.';
+        showModal('errorModal');
+        return;
+      }
+
+      if (response.status === 403) {
+        document.getElementById('errorMessage').textContent =
+          'You are not authorized to change this password.';
+        showModal('errorModal');
+        return;
+      }
+
+      if (response.ok) {
+        // Clear form
+        changePasswordForm.reset();
+        passwordError.classList.add('d-none');
+
+        document.getElementById('successMessage').textContent =
+          'Password changed successfully!';
         showModal('successModal');
       } else {
         const error = await response.json();

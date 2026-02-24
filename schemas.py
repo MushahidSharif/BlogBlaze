@@ -35,6 +35,12 @@ class UserUpdate(BaseModel):
     image_file: str | None = Field(default=None, min_length=1, max_length=200)
 
 
+class PasswordUpdate(BaseModel):
+    user_id: int
+    password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
