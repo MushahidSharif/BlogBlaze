@@ -21,14 +21,14 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <!-- Site Info -->
         {% if title %}
-            <title>FastAPI Blog - {{ title }}</title>
+            <title>{{ APP_GLOBAL_DATA['APP_NAME'] }} - {{ title }}</title>
         {% else %}
-            <title>FastAPI Blog</title>
+            <title>{{ APP_GLOBAL_DATA['APP_NAME'] }}</title>
         {% endif %}
-        <meta name="description" content="FastAPI Tutorial">
+        <meta name="description" content="{{ APP_GLOBAL_DATA['APP_NAME'] }}">
         <meta name="author" content="{{ APP_GLOBAL_DATA['APP_NAME'] }}">
         <!-- Open Graph Tags: The title of the page for social media sharing. It can match the title tag or be more descriptive. -->
-        <meta property="og:title" content="FastAPI Blog">
+        <meta property="og:title" content="{{ APP_GLOBAL_DATA['APP_NAME'] }}">
         <!-- Open Graph Tags: Typically set to "website" for static sites or "article" for content-heavy pages. -->
         <meta property="og:type" content="website">
         <!-- Open Graph Tags: The URL of the page, used to ensure link previews resolve to the correct page. -->
@@ -77,7 +77,7 @@
             <nav class="navbar navbar-expand-md bg-steel fixed-top"
                  data-bs-theme="dark">
                 <div class="container">
-                    <a class="navbar-brand me-4" href="{{ url_for("home") }}">FastAPI Blog</a>
+                    <a class="navbar-brand me-4" href="{{ url_for("home") }}">{{ APP_GLOBAL_DATA['APP_NAME'] }}</a>
                     <button class="navbar-toggler"
                             type="button"
                             data-bs-toggle="collapse"
