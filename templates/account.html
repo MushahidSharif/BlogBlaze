@@ -38,11 +38,15 @@
         </div>
         <hr>
         <!-- Profile Picture Section (Placeholder) -->
-        <div class="mb-4">
-            <h5>Profile Picture</h5>
-            <p class="text-body-secondary">File upload coming in a future tutorial.</p>
-            <input type="file" class="form-control" disabled>
-        </div>
+        <form id="uploadProfilePicForm">
+            <div class="mb-4">
+                <h5>Profile Picture</h5>
+                <p class="text-body-secondary">File upload coming in a future tutorial.</p>
+                <input type="file" id="userPicture" name="userPicture" class="form-control" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Picture</button>
+        </form>
+
         <hr>
         <!-- Change Password Section -->
         <div class="mb-4">
@@ -203,6 +207,70 @@
       showModal('errorModal');
     }
   });
+  //------------------------------------------------
+  // Update Profile Picture Form Handler
+  const pictureUpdateForm = document.getElementById('uploadProfilePicForm');
+  pictureUpdateForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const token = getToken();
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const userPictureformData = new FormData(pictureUpdateForm);
+    const userPictureData = Object.fromEntries(userPictureformData.entries());
+
+
+    try {
+      const response = await fetch(`/api/users/${currentUserId}/picture`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: userPictureformData,
+        //JSON.stringify(userData),
+      });
+
+      if (response.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+
+      if (response.status === 403) {
+        document.getElementById('errorMessage').textContent =
+          'You are not authorized to update this profile.';
+        showModal('errorModal');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Clear cache so next getCurrentUser() fetches fresh data
+        clearUserCache();
+
+        // Update display picture
+        document.getElementById('profileImage').src = data.image_path;
+        document.getElementById('profileImage').src= document.getElementById('profileImage').src.split("?")[0] + "?" + new Date().getTime()
+
+
+        document.getElementById('successMessage').textContent =
+          'Profile Picture updated successfully!';
+        showModal('successModal');
+      } else {
+        const error = await response.json();
+        document.getElementById('errorMessage').textContent = getErrorMessage(error);
+        showModal('errorModal');
+      }
+    } catch (error) {
+      document.getElementById('errorMessage').textContent =
+        'Network error. Please check your connection and try again.';
+      showModal('errorModal');
+    }
+  });
+  //============================================================
 
   // Change Password Form Handler
   const changePasswordForm = document.getElementById('changePasswordForm');

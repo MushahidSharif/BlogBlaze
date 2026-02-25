@@ -6,8 +6,8 @@ from . import log_manager
 
 #log settings
 LOG_LEVEL = 'DEBUG'  # log level
-log_in_file = True   # If True then log will be written in log file otherwise they will only show on console.
-app_only_log = False # If True then only application logs will be written and other third party packages will be ignored.
+log_in_file = False   # If True then log will be written in log file otherwise they will only show on console.
+app_only_log = True # If True then only application logs will be written and other third party packages will be ignored.
 separate_log_files = True # If True then logs from this application and from third party packages will be written in
                           # separate log files otherwise all logs will be written in same file.
 

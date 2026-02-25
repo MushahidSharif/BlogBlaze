@@ -2,7 +2,7 @@
 User-related API endpoints for registration, authentication, and profile management.
 """
 from typing import Annotated
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, status, Request, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,6 +65,16 @@ async def update_user(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     return await users_service.update_user(db=db, user_id=user_id, user_update=user_update, current_user=current_user)
+
+
+@router.post("/{user_id}/picture", response_model=UserPrivate)
+async def update_user_picture(
+    user_id: int,
+    userPicture: UploadFile,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await users_service.update_user_picture(db=db, user_id=user_id, userPicture=userPicture, current_user=current_user)
 
 
 @router.post("/{user_id}/update-password", response_model=UserPrivate)

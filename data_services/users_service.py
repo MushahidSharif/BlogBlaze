@@ -2,11 +2,12 @@
 User-related business logic extracted from routers/api/users.py.
 Provides async functions for creating, authenticating, retrieving, updating and deleting users.
 """
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, status, Request, UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+import appinfo
 import models
 from auth import hash_password, verify_password, create_access_token
 from access_manager import AccessManager
@@ -230,5 +231,37 @@ async def update_password(db: AsyncSession, user_id: int, password_update: Passw
     except Exception:
         await db.rollback()
         logger.exception("Error updating password for user_id:%s" % (user_id))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+async def update_user_picture(db: AsyncSession, user_id: int, userPicture: UploadFile,
+                              current_user: models.User) -> models.User:
+
+    if user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
+
+    try:
+        user = await get_user_or_404(db, user_id)  # will raise 404 if user doesn't exist
+
+        #if user_update.image_file is not None:
+        #    user.image_file = user_update.image_file
+        import os
+        ext = userPicture.filename.split(".")[-1]
+        file_path = os.path.join(appinfo.APP_BASE_DIR + "/media/profile_pics/" + user.username + "." + ext)
+
+        with open(file_path, 'wb') as out_file:
+            content = await userPicture.read()  # Or use file.stream() for large files
+            out_file.write(content)
+
+        user.image_file = user.username + "." + ext
+
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+    except HTTPException:
+        raise
+    except Exception:
+
+        await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
