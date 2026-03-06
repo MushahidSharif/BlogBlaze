@@ -28,5 +28,7 @@ class Settings(BaseSettings):
     smtp_security_type : Literal["ssl", "tls"] = "tls"
     smtp_from_email: EmailStr | None = None
 
+    max_upload_size_bytes: int = 5 * 1024 * 1024  # 5 MB
+
 
 settings = Settings()  # type: ignore[call-arg] # Loaded from .env file

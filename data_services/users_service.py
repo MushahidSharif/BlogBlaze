@@ -6,14 +6,16 @@ from fastapi import HTTPException, status, Request, UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.concurrency import run_in_threadpool
+from PIL import UnidentifiedImageError
 
-import appinfo
 import models
 from auth import hash_password, verify_password, create_access_token
 from access_manager import AccessManager
 from config import settings
 from schemas import Token, UserCreate, UserUpdate, PasswordUpdate
 from logging_config import log_config
+from utils.image_utils import process_profile_image, delete_profile_image
 
 logger = log_config.get_logger(__name__)
 
@@ -164,8 +166,6 @@ async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate, c
             user.username = user_update.username
         if user_update.email is not None:
             user.email = str(user_update.email).lower()
-        if user_update.image_file is not None:
-            user.image_file = user_update.image_file
 
         await db.commit()
         await db.refresh(user)
@@ -184,8 +184,13 @@ async def delete_user(db: AsyncSession, user_id: int, current_user: models.User)
     try:
         user = await get_user_or_404(db, user_id)  # will raise 404 if user doesn't exist
 
+        old_filename = user.image_file
+
         await db.delete(user)
         await db.commit()
+
+        if old_filename:
+            delete_profile_image(old_filename)
 
     except HTTPException:
         raise
@@ -233,7 +238,7 @@ async def update_password(db: AsyncSession, user_id: int, password_update: Passw
         logger.exception("Error updating password for user_id:%s" % (user_id))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-async def update_user_picture(db: AsyncSession, user_id: int, userPicture: UploadFile,
+async def upload_profile_picture(db: AsyncSession, user_id: int, file: UploadFile,
                               current_user: models.User) -> models.User:
 
     if user_id != current_user.id:
@@ -242,20 +247,32 @@ async def update_user_picture(db: AsyncSession, user_id: int, userPicture: Uploa
     try:
         user = await get_user_or_404(db, user_id)  # will raise 404 if user doesn't exist
 
-        #if user_update.image_file is not None:
-        #    user.image_file = user_update.image_file
-        import os
-        ext = userPicture.filename.split(".")[-1]
-        file_path = os.path.join(appinfo.APP_BASE_DIR + "/media/profile_pics/" + user.username + "." + ext)
+        content = await file.read()
 
-        with open(file_path, 'wb') as out_file:
-            content = await userPicture.read()  # Or use file.stream() for large files
-            out_file.write(content)
+        if len(content) > settings.max_upload_size_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File too large. Maximum size is {settings.max_upload_size_bytes // (1024 * 1024)}MB",
+            )
 
-        user.image_file = user.username + "." + ext
+        try:
+            new_filename = await run_in_threadpool(process_profile_image, content)
+        except UnidentifiedImageError as err:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP).",
+            ) from err
+
+        old_filename = current_user.image_file
+        user.image_file = new_filename
+
 
         await db.commit()
         await db.refresh(user)
+
+        if old_filename:
+            delete_profile_image(old_filename)
+
         return user
 
     except HTTPException:
@@ -264,4 +281,28 @@ async def update_user_picture(db: AsyncSession, user_id: int, userPicture: Uploa
 
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+async def delete_user_picture(user_id: int, current_user: models.User, db:AsyncSession):
+
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this user's picture",
+        )
+
+    old_filename = current_user.image_file
+
+    if old_filename is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No profile picture to delete",
+        )
+
+    current_user.image_file = None
+    await db.commit()
+    await db.refresh(current_user)
+
+    delete_profile_image(old_filename)
+
+    return current_user
 

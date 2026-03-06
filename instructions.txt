@@ -8,6 +8,7 @@ pip install sqlalchemy
 pip install aiosqlite     #( when using async functions. for postgres use psycopg)
 
 pip install "pwdlib[argon2]" pyjwt pydantic-settings
+pip install pillow
 
 
 # python-dotenv can also be used instead pydantic-settings but pydantic-settings gives more features

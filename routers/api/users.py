@@ -67,14 +67,14 @@ async def update_user(
     return await users_service.update_user(db=db, user_id=user_id, user_update=user_update, current_user=current_user)
 
 
-@router.post("/{user_id}/picture", response_model=UserPrivate)
-async def update_user_picture(
+@router.patch("/{user_id}/picture", response_model=UserPrivate)
+async def upload_profile_picture(
     user_id: int,
-    userPicture: UploadFile,
+    file: UploadFile,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return await users_service.update_user_picture(db=db, user_id=user_id, userPicture=userPicture, current_user=current_user)
+    return await users_service.upload_profile_picture(db=db, user_id=user_id, file=file, current_user=current_user)
 
 
 @router.post("/{user_id}/update-password", response_model=UserPrivate)
@@ -88,6 +88,16 @@ async def update_password(
     Update user password. Only the authenticated user can update their own password.
     """
     return await users_service.update_password(db=db, user_id=user_id, password_update=password_update, current_user=current_user)
+
+@router.delete("/{user_id}/picture", response_model=UserPrivate)
+async def delete_user_picture(
+    user_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await users_service.delete_user_picture(user_id, current_user, db)
+
+
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
