@@ -68,3 +68,12 @@ class PostResponse(PostBase):
     user_id: int
     date_posted: datetime
     author: UserPublic
+
+class RatingCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5)  # Rating must be between 1 and 5
+    review: str | None = Field(default=None, max_length=500)  # Optional review text
+
+class RatingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    post_id: int

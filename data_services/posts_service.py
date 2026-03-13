@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-from schemas import PostCreate, PostUpdate
+from schemas import PostCreate, PostUpdate, RatingCreate
 from logging_config import log_config
 
 logger = log_config.get_logger(__name__)
@@ -137,3 +137,53 @@ async def delete_post(db: AsyncSession, post_id: int, current_user: models.User)
         logger.exception("Error in deleting post userid:%s, post id:%s " % (current_user.id, post_id))
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+
+async def create_rating(db: AsyncSession, post_id: int, rating_data: RatingCreate, current_user: models.User) -> models.PostRating:
+    """
+    Create a rating for a post.
+
+    Args:
+        db: AsyncSession for database operations
+        post_id: The ID of the post to rate
+        rating_data: RatingCreate schema containing rating (1-5) and optional review
+        current_user: The current authenticated user
+
+    Returns:
+        PostRating object created in the database
+
+    Raises:
+        HTTPException: If post not found (404) or internal server error (500)
+    """
+    try:
+        # Check if post exists
+        result = await db.execute(select(models.Post).where(models.Post.id == post_id))
+        post = result.scalars().first()
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+        result = await db.execute(select(models.PostRating).where(models.Post.id == post_id and models.PostRating.user_id == current_user.id))
+        post_rating = result.scalars().first()
+        if post_rating:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User has already rated this post")
+
+        # Create new rating
+        new_rating = models.PostRating(
+            post_id=post_id,
+            user_id=current_user.id,
+            rating=rating_data.rating,
+            review=rating_data.review
+        )
+        db.add(new_rating)
+        await db.commit()
+        await db.refresh(new_rating)
+        return new_rating
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Error creating rating for post_id:%s, user_id:%s" % (post_id, current_user.id))
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+

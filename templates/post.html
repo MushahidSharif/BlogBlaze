@@ -11,7 +11,7 @@
             <div class="flex-grow-1">
                 <div class="article-metadata mb-2">
                     <a class="me-2"
-                       href="{{ url_for("user_posts", user_id=post.author.id) }}">{{ post.author.username }}</a>
+                       href="{{ url_for('user_posts', user_id=post.author.id) }}">{{ post.author.username }}</a>
                     <small class="text-body-secondary">{{ post.date_posted.strftime("%B %d, %Y") }}</small>
                 </div>
                 <h2 class="article-title">{{ post.title }}</h2>
@@ -25,6 +25,12 @@
                             class="btn btn-outline-danger"
                             data-bs-toggle="modal"
                             data-bs-target="#deleteModal">Delete Post</button>
+                </div>
+                <div id="ratingActions" class="rating-actions mt-3 pt-3 border-top d-none">
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#ratingModal">Add Rating</button>
                 </div>
             </div>
         </div>
@@ -102,6 +108,56 @@
             </div>
         </div>
     </div>
+    <!-- Rating Modal -->
+    <div class="modal fade"
+         id="ratingModal"
+         tabindex="-1"
+         aria-labelledby="ratingModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ratingModalLabel">Rate This Post</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <form id="ratingForm">
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <label class="form-label">Rating</label>
+                            <div class="star-rating" id="starRating">
+                                <span class="star" data-rating="1" role="button" tabindex="0" aria-label="1 star">★</span>
+                                <span class="star" data-rating="2" role="button" tabindex="0" aria-label="2 stars">★</span>
+                                <span class="star" data-rating="3" role="button" tabindex="0" aria-label="3 stars">★</span>
+                                <span class="star" data-rating="4" role="button" tabindex="0" aria-label="4 stars">★</span>
+                                <span class="star" data-rating="5" role="button" tabindex="0" aria-label="5 stars">★</span>
+                            </div>
+                            <input type="hidden" id="ratingValue" name="rating" value="0" required>
+                            <small id="ratingText" class="text-muted d-block mt-2">No rating selected</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reviewText" class="form-label">Review (Optional)</label>
+                            <textarea class="form-control"
+                                      id="reviewText"
+                                      name="review"
+                                      rows="4"
+                                      maxlength="500"
+                                      placeholder="Share your thoughts about this post..."></textarea>
+                            <small class="text-muted d-block mt-1"><span id="charCount">0</span>/500 characters</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="submitRatingBtn">Submit Rating</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock content %}
 {% block scripts %}
     <script type="module">
@@ -116,6 +172,10 @@
         const user = await getCurrentUser();
         if (user && user.id === postUserId) {
             document.getElementById('postActions').classList.remove('d-none');
+        }
+        // Show rating button to all logged-in users
+        if (user) {
+            document.getElementById('ratingActions').classList.remove('d-none');
         }
     }
 
@@ -199,6 +259,112 @@
                 const error = await response.json();
                 document.getElementById('errorMessage').textContent = getErrorMessage(error);
                 hideModal('deleteModal');
+                showModal('errorModal');
+            }
+        } catch (error) {
+            document.getElementById('errorMessage').textContent =
+                'Network error. Please check your connection and try again.';
+            showModal('errorModal');
+        }
+    });
+
+    // Star Rating Handler
+    const starRating = document.getElementById('starRating');
+    const ratingValue = document.getElementById('ratingValue');
+    const ratingText = document.getElementById('ratingText');
+    const stars = document.querySelectorAll('.star-rating .star');
+
+    stars.forEach(star => {
+        star.addEventListener('click', (e) => {
+            const rating = e.target.dataset.rating;
+            ratingValue.value = rating;
+            updateStarDisplay(rating);
+        });
+
+        star.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const rating = e.target.dataset.rating;
+                ratingValue.value = rating;
+                updateStarDisplay(rating);
+            }
+        });
+    });
+
+    function updateStarDisplay(rating) {
+        stars.forEach(star => {
+            const starRating = parseInt(star.dataset.rating);
+            if (starRating <= rating) {
+                star.classList.add('filled');
+            } else {
+                star.classList.remove('filled');
+            }
+        });
+        ratingText.textContent = `${rating} star${rating > 1 ? 's' : ''} selected`;
+    }
+
+    // Character count for review
+    const reviewText = document.getElementById('reviewText');
+    const charCount = document.getElementById('charCount');
+    reviewText.addEventListener('input', () => {
+        charCount.textContent = reviewText.value.length;
+    });
+
+    // Rating Form Handler
+    const ratingForm = document.getElementById('ratingForm');
+    ratingForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const token = getToken();
+        if (!token) { window.location.href = '/login'; return; }
+
+        const rating = parseInt(ratingValue.value);
+        if (!rating || rating < 1 || rating > 5) {
+            document.getElementById('errorMessage').textContent = 'Please select a rating.';
+            hideModal('ratingModal');
+            showModal('errorModal');
+            return;
+        }
+
+        const ratingData = {
+            rating: rating,
+            review: reviewText.value || null
+        };
+
+        try {
+            const response = await fetch(`/api/posts/${postId}/rating`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(ratingData),
+            });
+
+            if (response.status === 401) { window.location.href = '/login'; return; }
+            if (response.status === 403) {
+            console.log(response);
+            const error = await response.json();
+                document.getElementById('errorMessage').textContent = error.detail;
+                hideModal('ratingModal');
+                showModal('errorModal');
+                return;
+            }
+
+            if (response.ok) {
+                document.getElementById('successMessage').textContent =
+                    'Rating submitted successfully!';
+                hideModal('ratingModal');
+                showModal('successModal');
+                ratingForm.reset();
+                ratingValue.value = '0';
+                stars.forEach(star => star.classList.remove('filled'));
+                ratingText.textContent = 'No rating selected';
+                charCount.textContent = '0';
+            } else {
+                const error = await response.json();
+                document.getElementById('errorMessage').textContent = getErrorMessage(error);
+                hideModal('ratingModal');
                 showModal('errorModal');
             }
         } catch (error) {

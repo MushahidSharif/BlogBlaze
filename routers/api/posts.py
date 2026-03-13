@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import CurrentUser
 from database import get_db
-from schemas import PostCreate, PostResponse, PostUpdate
+from schemas import PostCreate, PostResponse, PostUpdate, RatingCreate, RatingResponse
 from data_services import posts_service
 
 router = APIRouter()
@@ -64,3 +64,12 @@ async def delete_post(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     await posts_service.delete_post(db=db, post_id=post_id, current_user=current_user)
+
+@router.post("/{post_id}/rating", response_model=RatingResponse)
+async def create_rating(
+    post_id: int,
+    rating: RatingCreate,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await posts_service.create_rating(db=db, post_id=post_id, rating_data=rating, current_user=current_user)

@@ -51,3 +51,24 @@ class Post(Base):
     )
 
     author: Mapped[User] = relationship(back_populates="posts")
+
+# Add  post rating model
+class PostRating(Base):
+    __tablename__ = "post_ratings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("posts.id"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    review: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    post: Mapped[Post] = relationship()
+    user: Mapped[User] = relationship()
