@@ -8,6 +8,13 @@ engine = create_async_engine(
     connect_args={"check_same_thread": False},
 )
 
+# for using with PostgreSQL
+# SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://myuser:mypassword@localhost:5433/mydatabase"
+# engine = create_async_engine(
+#      SQLALCHEMY_DATABASE_URL
+#  )
+
+
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,

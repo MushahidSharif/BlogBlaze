@@ -77,3 +77,9 @@ class RatingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     post_id: int
+
+class AverageRating(BaseModel):
+
+    post_id: int
+    average_rating: float
+    total_count: int

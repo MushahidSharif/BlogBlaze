@@ -2,12 +2,12 @@
 Post-related functions. Provides async functions for listing, creating, retrieving, updating and deleting posts.
 """
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-from schemas import PostCreate, PostUpdate, RatingCreate
+from schemas import PostCreate, PostUpdate, RatingCreate, AverageRating
 from logging_config import log_config
 
 logger = log_config.get_logger(__name__)
@@ -162,7 +162,11 @@ async def create_rating(db: AsyncSession, post_id: int, rating_data: RatingCreat
         if not post:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
-        result = await db.execute(select(models.PostRating).where(models.Post.id == post_id and models.PostRating.user_id == current_user.id))
+        result = await db.execute(select(models.PostRating)
+            .where(
+                and_(models.PostRating.post_id == post_id, models.PostRating.user_id == current_user.id)
+            )
+        )
         post_rating = result.scalars().first()
         if post_rating:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User has already rated this post")
@@ -187,3 +191,31 @@ async def create_rating(db: AsyncSession, post_id: int, rating_data: RatingCreat
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
+
+async def get_average_ratings_of_posts(db: AsyncSession) -> dict[int, AverageRating]:
+    """
+    Get average ratings and total count of ratings for all posts.
+    """
+    try:
+        stmt = (
+            select(
+                models.PostRating.post_id,
+                func.round(func.avg(models.PostRating.rating),1).label("average_rating"),
+                func.count(models.PostRating.id).label("total_count")
+            )
+            .group_by(models.PostRating.post_id)
+        )
+
+        result = await db.execute(stmt)
+        ratings = result.all()
+
+        dict_ratings = {}
+        for row in ratings:
+            dict_ratings[row.post_id] = AverageRating(post_id=row.post_id,
+                                                      average_rating=float(row.average_rating),
+                                                      total_count=row.total_count)
+        return dict_ratings
+
+    except Exception:
+        logger.exception("Error fetching average ratings for posts")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")

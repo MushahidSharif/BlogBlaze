@@ -20,10 +20,12 @@ router = APIRouter()
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
     """Render the home page displaying all posts ordered by date (newest first)."""
     posts = await posts_service.list_posts(db=db)
+    post_ratings = await posts_service.get_average_ratings_of_posts(db=db)
+
     return templates.TemplateResponse(
         request,
         "home.html",
-        {"posts": posts, "title": "Home"},
+        {"posts": posts, "title": "Home", "post_ratings":post_ratings},
     )
 
 
