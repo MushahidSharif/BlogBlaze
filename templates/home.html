@@ -22,7 +22,10 @@
 
                     </h2>
                         {% if post.id in post_ratings %}
+                        <div>
                         <span class="article-metadata star filled">★{{ post_ratings[post.id].average_rating }}</span>
+                        <span>({{ post_ratings[post.id].total_count }})</span>
+                        </div>
                         {% endif %}
                     </div>
                     <p class="article-content">{{ post.content }}</p>
