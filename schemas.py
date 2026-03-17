@@ -78,8 +78,15 @@ class RatingResponse(BaseModel):
 
     post_id: int
 
-class AverageRating(BaseModel):
-
-    post_id: int
+class PostWithAverageRating(PostResponse):
+    model_config = ConfigDict(from_attributes=True)
     average_rating: float
-    total_count: int
+    rating_count: int
+
+
+class PaginatedPostsResponse(BaseModel):
+    posts: list[PostWithAverageRating]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool

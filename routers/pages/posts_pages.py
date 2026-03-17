@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from appinfo import templates
 from database import get_db
+from config import settings
 from data_services import posts_service, users_service
 
 router = APIRouter()
@@ -19,13 +20,17 @@ router = APIRouter()
 @router.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
     """Render the home page displaying all posts ordered by date (newest first)."""
-    posts = await posts_service.list_posts(db=db)
-    post_ratings = await posts_service.get_average_ratings_of_posts(db=db)
+    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=0, limit=settings.posts_per_page)
 
     return templates.TemplateResponse(
         request,
         "home.html",
-        {"posts": posts, "title": "Home", "post_ratings":post_ratings},
+        {
+            "posts": posts,
+            "title": "Home",
+            "limit": settings.posts_per_page,
+            "has_more": has_more,
+        },
     )
 
 

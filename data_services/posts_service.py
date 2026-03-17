@@ -7,19 +7,63 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-from schemas import PostCreate, PostUpdate, RatingCreate, AverageRating
+from schemas import PostCreate, PostUpdate, RatingCreate, PostWithAverageRating
 from logging_config import log_config
+from config import settings
 
 logger = log_config.get_logger(__name__)
 
 
-async def list_posts(db: AsyncSession) -> list[models.Post]:
+async def list_posts(db: AsyncSession, skip: int, limit: int) -> (list[models.Post], int, bool):
     """Return all posts with their authors, ordered by date posted descending."""
+    count_result = await db.execute(select(func.count()).select_from(models.Post))
+    total = count_result.scalar() or 0
+
     result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author)).order_by(models.Post.date_posted.desc())
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .order_by(models.Post.date_posted.desc())
+        .offset(skip)
+        .limit(limit),
     )
     posts = result.scalars().all()
-    return list(posts)
+
+    has_more = skip + len(posts) < total
+
+    return posts, total, has_more
+
+async def list_posts_with_rating(db: AsyncSession, skip: int, limit: int) -> tuple[list[PostWithAverageRating], int, bool]:
+    """
+    Return all posts with their authors, average ratings and total count of ratings,
+    ordered by date posted descending.
+    :param db:
+    :param skip: offset to start fetching posts from
+    :param limit: No of rows to return
+    :return: tuple list[PostWithAverageRating], total count of posts, has_more flag
+    """
+
+    (posts, total, has_more) = await list_posts(db=db, skip=skip, limit=limit)
+    dict_post_ratings = await get_average_ratings_of_posts(db=db)
+
+    # PostWithAverageRating
+    post_list = []
+    for post in posts:
+
+        avg_post_rating_tuple = dict_post_ratings.get(post.id, None)
+        avg_rating = 0
+        total_count = 0
+        if avg_post_rating_tuple:
+            avg_rating = avg_post_rating_tuple[1]
+            total_count = avg_post_rating_tuple[2]
+
+        p = PostWithAverageRating(id=post.id, title=post.title, content=post.content,
+                                  date_posted=post.date_posted, user_id=post.user_id,
+                                  author=post.author, average_rating=avg_rating, rating_count=total_count
+                                  )
+
+        post_list.append(p)
+
+    return post_list, total, has_more
 
 
 async def get_posts_by_user(db: AsyncSession, user_id: int) -> list[models.Post]:
@@ -192,7 +236,7 @@ async def create_rating(db: AsyncSession, post_id: int, rating_data: RatingCreat
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-async def get_average_ratings_of_posts(db: AsyncSession) -> dict[int, AverageRating]:
+async def get_average_ratings_of_posts(db: AsyncSession) -> dict[int, tuple[int, float, int]]:
     """
     Get average ratings and total count of ratings for all posts.
     """
@@ -211,9 +255,7 @@ async def get_average_ratings_of_posts(db: AsyncSession) -> dict[int, AverageRat
 
         dict_ratings = {}
         for row in ratings:
-            dict_ratings[row.post_id] = AverageRating(post_id=row.post_id,
-                                                      average_rating=float(row.average_rating),
-                                                      total_count=row.total_count)
+            dict_ratings[row.post_id] = (row.post_id, float(row.average_rating), row.total_count)
         return dict_ratings
 
     except Exception:

@@ -4,19 +4,33 @@ This module defines the API endpoints for managing blog posts. It includes route
  ensure that only the author can modify or delete their posts.
 """
 from typing import Annotated
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import CurrentUser
+from config import settings
 from database import get_db
-from schemas import PostCreate, PostResponse, PostUpdate, RatingCreate, RatingResponse
+from schemas import PostCreate, PostResponse, PaginatedPostsResponse, PostUpdate, RatingCreate, RatingResponse
 from data_services import posts_service
 
 router = APIRouter()
 
-@router.get("", response_model=list[PostResponse])
-async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
-    return await posts_service.list_posts(db=db)
+@router.get("", response_model=PaginatedPostsResponse)
+async def get_posts(
+        db: Annotated[AsyncSession, Depends(get_db)],
+        skip: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = settings.posts_per_page,
+):
+
+    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=skip, limit=limit)
+
+    return PaginatedPostsResponse(
+        posts=posts,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=has_more,
+    )
 
 
 @router.post(

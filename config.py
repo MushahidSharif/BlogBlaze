@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     smtp_from_email: EmailStr | None = None
 
     max_upload_size_bytes: int = 5 * 1024 * 1024  # 5 MB
+    posts_per_page: int = 10
 
 
 settings = Settings()  # type: ignore[call-arg] # Loaded from .env file
