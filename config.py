@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     password_reset_token_expire_minutes: int = 30
 
+    db_connection_string : str = "sqlite+aiosqlite:///./blog.db"
+
     # SMTP configuration
     email_enable: bool = False  # if email sending is enabled or not.
     smtp_host: str | None = None

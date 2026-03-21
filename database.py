@@ -1,18 +1,28 @@
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
+from config import settings
 
-engine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
+# DB connection string can be defined in env file. Same exaple dbconnection strings are
+# "sqlite+aiosqlite:///./blog.db"
+# "postgresql+asyncpg://myuser:mypassword@postgres-db:5432/mydatabase"
+
+
+SQLALCHEMY_DATABASE_URL = settings.db_connection_string
+
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine = create_async_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
 )
+elif SQLALCHEMY_DATABASE_URL.startswith("postgresql"):
+    engine = create_async_engine(
+         SQLALCHEMY_DATABASE_URL
+     )
+else:
+    # Add support for other database here.
+    raise Exception("Unsupported database.")
 
-#for using with PostgreSQL
-# SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://myuser:mypassword@postgres-db:5432/mydatabase"
-# engine = create_async_engine(
-#      SQLALCHEMY_DATABASE_URL
-#  )
 
 
 AsyncSessionLocal = async_sessionmaker(
