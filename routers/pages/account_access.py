@@ -46,7 +46,7 @@ async def forgot_password(db: Annotated[AsyncSession, Depends(get_db)], request:
 
     return html_utils.get_html_message_response(
         request,message_type="success", title="Success",
-        message="If an account with that email exists, a password reset link has been sent.",
+        message='If an account exists with this email, you will receive an email with password reset instructions shortly.',
         status_code=status.HTTP_200_OK,
     )
 

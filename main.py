@@ -12,6 +12,7 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
 from routers.api import users, posts
@@ -19,6 +20,7 @@ from routers.pages import users_pages, posts_pages, account_access
 from utils import html_utils
 from pathlib import Path
 import  appinfo
+from config import settings
 
 # Logger is none here because it will be initialized in the lifespan function after the log manager is configured.
 logger = None
@@ -86,6 +88,26 @@ def create_required_folders():
 
 def initialize_application():
     create_required_folders()
+
+    cors_origins = settings.cors_origins.split(",")
+
+    # # Define the list of origins that should be permitted
+    # origins = [
+    #     "http://localhost:3000",  # Example frontend development URL
+    #     "http://127.0.0.1:3000",
+    #     #"https://yourproductionapp.com",
+    #     # You can also use "http://127.0.0.1:3000" if necessary
+    # ]
+
+    origins = cors_origins
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,  # List of allowed origins
+        allow_credentials=True,  # Allow cookies/authorization headers (requires specific origins, not "*")
+        allow_methods=["*"],  # Allow all standard HTTP methods (GET, POST, PUT, etc.)
+        allow_headers=["*"],  # Allow all standard headers
+    )
 
     app.mount("/static", StaticFiles(directory="static"), name="static")
     app.mount("/media", StaticFiles(directory="media"), name="media")
