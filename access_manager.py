@@ -47,12 +47,12 @@ class AccessManager:
         return TokenCreator.verify_token(token, TokenType.PASSWORD_RESET_TOKEN)
 
     @staticmethod
-    def send_password_reset_email(user_id, user_email, request):
+    def send_password_reset_email(user_id, user_email):
         """Generate a token for password reset and send a password reset email to the user."""
         logger.info("Sending password reset email for userid %s",  user_id )
         data = {"sub": str(user_id)}
         reset_token = TokenCreator.create_token(data, TokenType.PASSWORD_RESET_TOKEN)
-        password_reset_url = str(request.url_for('reset_password_page')) + '?token=' + reset_token
+        password_reset_url = settings.app_url + '/reset-password?token=' + reset_token
 
         email_manager = EmailManager()
         email_manager.send_password_reset_email(user_email, password_reset_url)

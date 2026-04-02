@@ -33,10 +33,11 @@ BlogBlaze/
 │   ├── api/                   # REST API endpoints
 │   │   ├── posts.py          # Post management endpoints
 │   │   └── users.py          # User management endpoints
+│   │   └── account_access.py  # Account access endpoints
 │   └── pages/                # Page rendering routes
 │       ├── posts_pages.py    # Post display pages
 │       ├── users_pages.py    # User pages
-│       └── account_access.py # Authentication pages
+│       └── account_access_pages.py # Authentication pages
 ├── data_services/             # Business Logic Layer
 │   ├── posts_service.py      # Post operations logic
 │   └── users_service.py      # User operations logic

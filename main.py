@@ -15,8 +15,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
-from routers.api import users, posts
-from routers.pages import users_pages, posts_pages, account_access
+from routers.api import users, posts, account_access
+from routers.pages import users_pages, posts_pages, account_access_pages
 from utils import html_utils
 from pathlib import Path
 import  appinfo
@@ -115,9 +115,10 @@ def initialize_application():
     # Adding REST API Routers
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+    app.include_router(account_access.router, prefix="/api/account_access", tags=["account_access"])
 
     # Adding HTML Page Routers
-    app.include_router(account_access.router)
+    app.include_router(account_access_pages.router)
     app.include_router(users_pages.router)
     app.include_router(posts_pages.router)
 
