@@ -47,26 +47,7 @@ async def reset_password_page(token: str, request: Request, db: Annotated[AsyncS
         {"title": "Reset Password"},
     )
 
-@router.get("/resend_email_verification")
-async def resend_email_verification(uid:int, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
-
-    user = await users_service.get_user_or_404(db, uid)
-
-    if user.account_status != 0 and settings.email_verification:
-        AccessManager.send_account_verification_email(uid, user.email, request)
-        return html_utils.get_html_message_response(
-            request, message_type="success", title="Success",
-            message="Account Verification email has been send. Please check your email.",
-            status_code=status.HTTP_200_OK,
-        )
-
-    return html_utils.get_html_message_response(
-        request, message_type="success", title="Success",
-        message="User Account is already active. Please login with your User/Password",
-        status_code=status.HTTP_200_OK,
-    )
-
-@router.get("/verifyEmail")
+@router.get("/verify_email")
 async def verify_email(token:str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
     user_id = AccessManager.verify_email_verification_token(token)
     if user_id is None:

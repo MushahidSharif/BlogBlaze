@@ -27,8 +27,8 @@
 {% endblock content %}
 {% block scripts %}
     <script type="module">
-      import { getErrorMessage, showModal } from '/static/js/utils.js';
-
+      import { getErrorMessage, showModal, hideModal } from '/static/js/utils.js';
+   
       const loginForm = document.getElementById('loginForm');
 
       loginForm.addEventListener('submit', async (event) => {
@@ -66,9 +66,9 @@
                 //document.getElementById('errorMessage').textContent =
                 //    'Account is pending verification. Please Check your email to verify your account <br>' + data.resend_email_link;
 
-                 document.getElementById('errorMessage').innerHTML  =
-                    'Account is pending verification.<br> Please Check your email to verify your account <br> <a href="' + data.resend_email_link
-                    + '">Resend Email</a>';
+                  const useremail = formData.get('username');
+                  document.getElementById('errorMessage').innerHTML =
+                        `Account is pending verification.<br> Please Check your email to verify your account <br> <a onclick="resendActivationLink('${useremail}')" href="javascript:void(0)">Resend Email</a>`;
                 showModal('errorModal');
               }
 
@@ -85,5 +85,37 @@
           showModal('errorModal');
         }
       });
+      
+      async function resendActivationLink(user_email) {
+
+        try {
+          const response = await fetch('/api/account_access/account_verification_request', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({"user_email": user_email}),
+          });
+          hideModal('errorModal');
+
+          if (response.ok) {
+            const data = await response.json();
+            document.getElementById('successMessage').textContent = data.message;
+            showModal('successModal');
+          } else {
+            const error = await response.json();
+            document.getElementById('errorMessage').textContent = getErrorMessage(error);
+            showModal('errorModal');
+          }
+        } catch (error) {
+          document.getElementById('errorMessage').textContent =
+            'Network error. Please check your connection and try again.';
+          showModal('errorModal');
+        }
+      }
+      
+    // Add this function in global scope otherwise it will not be called from inline onclick in the error message.
+    window.resendActivationLink = resendActivationLink;
+      
     </script>
 {% endblock scripts %}

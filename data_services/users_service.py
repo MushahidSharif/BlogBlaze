@@ -94,17 +94,15 @@ async def login_user(db: AsyncSession, email: str, password: str, request: Reque
             )
 
         if user.account_status != 0:
-            resend_email_verify_link = str(request.app.url_path_for('resend_email_verification')) + '?uid=' + str(user.id)
             return Token(
                 access_token="",
                 token_type="",
-                account_status=user.account_status,
-                resend_email_link=resend_email_verify_link,
+                account_status=user.account_status
             )
 
         # Create access token with user id as subject
         access_token = create_access_token(user.id)
-        return Token(access_token=access_token, token_type="bearer", account_status=0, resend_email_link="")
+        return Token(access_token=access_token, token_type="bearer", account_status=0)
 
     except HTTPException:
         raise

@@ -45,13 +45,14 @@ class PasswordUpdate(BaseModel):
     user_id: int
     password: str = Field(min_length=8)
     new_password: str = Field(min_length=8)
-
+    
+class AccountVerificationRequest(BaseModel):
+    user_email: EmailStr = Field(max_length=120)
 
 class Token(BaseModel):
     access_token: str
     token_type: str
     account_status: int
-    resend_email_link: str
 
 
 class PostBase(BaseModel):
