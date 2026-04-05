@@ -59,7 +59,7 @@ async def reset_password(db: Annotated[AsyncSession, Depends(get_db)], reset_pw_
 
 
 @router.post("/account_verification_request", status_code=status.HTTP_200_OK)
-async def account_verification_request(request_data: AccountVerificationRequest, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+async def account_verification_request(request_data: AccountVerificationRequest, db: Annotated[AsyncSession, Depends(get_db)]):
     
     user_email = request_data.user_email
 
@@ -67,7 +67,7 @@ async def account_verification_request(request_data: AccountVerificationRequest,
     
     if user:
         if user.account_status != 0 and settings.email_verification:
-            AccessManager.send_account_verification_email(user.id, user.email, request)
+            AccessManager.send_account_verification_email(user.id, user.email)
             
             return {
                 "message": "Account Verification email has been send. Please check your email." 

@@ -28,7 +28,7 @@ class AccessManager:
 
 
     @staticmethod
-    def send_account_verification_email(user_id, user_email, request):
+    def send_account_verification_email(user_id, user_email):
         """Generate a email account verification token and send an email account verification email to the user."""
         logger.info("Sending password reset email for userid %s", user_id)
         data = {"sub": str(user_id)}

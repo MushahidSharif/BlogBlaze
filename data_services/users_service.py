@@ -60,7 +60,7 @@ async def create_user(db: AsyncSession, user: UserCreate, request: Request | Non
         if settings.email_verification and request is not None:
             # send verification email but don't fail creation if email sending fails
             try:
-                AccessManager.send_account_verification_email(new_user.id, new_user.email, request)
+                AccessManager.send_account_verification_email(new_user.id, new_user.email)
             except Exception:
                 logger.exception("Failed to send account verification email for userid %s" % (new_user.id))
                 # Best-effort: don't interrupt user creation for email failures

@@ -31,7 +31,7 @@ class EmailManager():
             html_body = html_body.replace(place_holder_name, replacement_value)
 
         print(html_body)
-        return
+        #return
         # TODO Remove it
 
         self.__email_sender.send_email(

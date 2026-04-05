@@ -41,11 +41,13 @@ async def reset_password_page(token: str, request: Request, db: Annotated[AsyncS
 
     user = await users_service.get_user_or_404(db, int(user_id))
 
-    return templates.TemplateResponse(
+    response =  templates.TemplateResponse(
         request,
         "reset_password.html",
         {"title": "Reset Password"},
     )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 @router.get("/verify_email")
 async def verify_email(token:str, request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
@@ -68,8 +70,10 @@ async def verify_email(token:str, request: Request, db: Annotated[AsyncSession, 
     user.account_status =0
     await db.commit()
 
-    return html_utils.get_html_message_response(
+    response = html_utils.get_html_message_response(
             request, message_type="success", title="Success",
             message="Email account is successfully verified. Please login with your user/password",
             status_code=status.HTTP_200_OK,
     )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response

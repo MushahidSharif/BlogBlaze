@@ -89,7 +89,7 @@ def create_required_folders():
 def initialize_application():
     create_required_folders()
 
-    cors_origins = settings.cors_origins.split(",")
+    cors_origins = [item.strip() for item in settings.cors_origins.split(",")]
 
     # # Define the list of origins that should be permitted
     # origins = [
