@@ -58,10 +58,16 @@ async def user_posts_page(
 ):
     """Render the user posts page displaying all posts for a specific user. Returns 404 if user does not exist."""
     user = await users_service.get_user_or_404(db=db, user_id=user_id)
-    posts = await posts_service.get_posts_by_user(db=db, user_id=user_id)
+    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=0, limit=settings.posts_per_page,user_id=user_id)
 
     return templates.TemplateResponse(
         request,
         "user_posts.html",
-        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
+        {
+            "posts": posts,
+            "user": user,
+            "title": f"{user.username}'s Posts",
+            "limit": settings.posts_per_page,
+            "has_more": has_more,
+        },
     )

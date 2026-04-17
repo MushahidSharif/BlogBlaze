@@ -2,15 +2,16 @@
 User-related API endpoints for registration, authentication, and profile management.
 """
 from typing import Annotated
-from fastapi import APIRouter, Depends, status, Request, UploadFile
+from fastapi import APIRouter, Depends, status, Query, Request, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import CurrentUser
+from config import settings
 from database import get_db
-from schemas import PostResponse, Token, UserCreate, UserPrivate, UserPublic, UserUpdate, PasswordUpdate
+from schemas import Token, UserCreate, UserPrivate, UserPublic, UserUpdate, PasswordUpdate, PaginatedPostsResponse
 
-from data_services import users_service
+from data_services import users_service, posts_service
 
 router = APIRouter()
 
@@ -52,9 +53,24 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     return await users_service.get_user_or_404(db=db, user_id=user_id)
 
 
-@router.get("/{user_id}/posts", response_model=list[PostResponse])
-async def get_user_posts(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
-    return await users_service.get_user_posts(db=db, user_id=user_id)
+@router.get("/{user_id}/posts", response_model=PaginatedPostsResponse)
+async def get_user_posts(
+        user_id: int, 
+        db: Annotated[AsyncSession, Depends(get_db)],
+        skip: Annotated[int, Query(ge=0),] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = settings.posts_per_page,
+):
+    
+    #return await users_service.get_user_posts(db=db, user_id=user_id)
+    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=skip, limit=limit)
+
+    return PaginatedPostsResponse(
+        posts=posts,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=has_more,
+    )
 
 
 @router.patch("/{user_id}", response_model=UserPrivate)
