@@ -62,7 +62,7 @@ async def get_user_posts(
 ):
     
     #return await users_service.get_user_posts(db=db, user_id=user_id)
-    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=skip, limit=limit)
+    (posts, total, has_more) = await posts_service.list_posts_with_rating(db=db, skip=skip, limit=limit, user_id=user_id)
 
     return PaginatedPostsResponse(
         posts=posts,

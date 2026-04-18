@@ -14,8 +14,13 @@ logger = log_config.get_logger(__name__)
 
 
 async def list_posts(db: AsyncSession, skip: int, limit: int, user_id:int=0) -> tuple[list[models.Post], int, bool]:
-    """Return all posts with their authors, ordered by date posted descending."""
-    count_result = await db.execute(select(func.count()).select_from(models.Post))
+    """Return all posts if user_id is 0 or all post of given user, with their authors, ordered by date posted descending."""
+    
+    count_query =  select(func.count()).select_from(models.Post)
+    if user_id > 0:
+        count_query = count_query.where(models.Post.user_id == user_id)
+        
+    count_result = await db.execute(count_query)
     total = count_result.scalar() or 0
 
     query = (
